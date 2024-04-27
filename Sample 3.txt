@@ -1,0 +1,177 @@
+---------------------------------------- INHERITANCE -------------------------------------------------
+
+-- Create shape_type as object (parent type)
+create or replace type shape_type as object(
+	name varchar2(20),
+	member function cal_area return number
+) not final
+/
+
+-- Define shape_type body
+create or replace type body shape_type
+as
+	member function cal_area return number is
+	begin
+		return 0;
+	end;
+end;
+/
+
+
+-- Create rectangle_type as object (sub type of shape_type)
+-- Define length and width as additional attributes
+-- Override cal_area method in parent type
+create or replace type rectangle_type under shape_type(
+	length number,
+	width number,
+	overriding member function cal_area return number
+)
+/
+
+-- Define rectangle_type body
+create or replace type body rectangle_type 
+as
+	overriding member function cal_area return number is
+	begin
+		return length * width;
+	end cal_area;	
+end;
+/
+
+
+
+-- Create circle_type as object (sub type of shape_type)
+-- Define radius as additional attribute
+-- Override cal_area method in parent type
+create or replace type circle_type under shape_type(
+	radius number,
+	overriding member function cal_area return number
+)
+/
+
+-- Define circle_type body
+create or replace type body circle_type
+as
+	overriding member function cal_area return number is
+	begin
+		return (22/7) * radius * radius;
+	end cal_area;	
+end;
+/
+
+
+-- Create shape_tab
+create table shape_tab of shape_type
+/
+
+-- Insert values into shape_tab
+insert into shape_tab
+values
+(
+	rectangle_type('Rectangle', 2, 3)
+)
+/
+
+insert into shape_tab
+values
+(
+	circle_type('Circle', 2)
+)
+/
+
+insert into shape_tab
+values
+(
+	rectangle_type('Rectangle', 4, 2)
+)
+/
+
+insert into shape_tab
+values
+(
+	circle_type('Circle', 2.5)
+)
+/
+
+
+-- Queries
+
+-- (a) Select all instances in shape_tab
+select value(s) from shape_tab s
+/
+
+-- (b) Display areas of all records in shape_tab
+select value(s), s.cal_area()
+from shape_tab s
+/
+
+-- (c) Select all instances in shape_tab of rectangle_type only
+select value(s)
+from shape_tab s
+where value(s) is of (rectangle_type)
+/
+
+-- Create square_type under rectangle_type
+alter type rectangle_type
+not final
+cascade
+/
+
+create or replace type square_type under rectangle_type(
+	shape_type varchar2(10)
+)
+/
+
+-- Insert new record into shape_tab
+insert into shape_tab
+values
+(
+	square_type('Rectangle', 2, 2, 'Square')
+)
+/
+
+-- Select all instances in shape_tab of rectangle_type
+select value(s)
+from shape_tab s
+where value(s) is of (rectangle_type)
+/
+
+-- Select all instances in shape_tab of rectangle_type only
+select value(s)
+from shape_tab s
+where value(s) is of (only rectangle_type)
+/
+
+-- Use the treat() function to treat a super type as a sub type to access a particular attribute
+select s.name, treat(value(s) as rectangle_type).length as length, treat(value(s) as rectangle_type).width as width
+from shape_tab s
+where value(s) is of (only rectangle_type)
+/
+
+
+
+
+------ POINTS TO REMEMBER -----
+* Declaring a type as "not instantiable" does not allow instances of that type (similar to "abstract classes")
+	Eg - create or replace type shape_type as object() not instantiable not final
+		- The above code allows "shape_type" to be inherited but does not allow creating instances of shape_type
+
+* Declaring a member method as "final" in the supertype does not allow subtypes to override it
+	Eg - create type animal_type as object(
+		...,
+		final member function get_legs return int
+	     )
+
+
+* It is possible to overload member methods in subtypes
+	Eg - create or replace type shape_type as object(
+		...,
+		member function cal_area(a int) return number
+	     ) not final
+
+	     create or replace type rectangle_type under shape_type(
+		...,
+		member function cal_area(a int, b int) return number
+	     ) 
+	     
+	    
